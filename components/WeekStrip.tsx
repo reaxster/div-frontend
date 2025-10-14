@@ -61,10 +61,12 @@ export default function WeekStrip({ tiles }: { tiles: Tile[] }) {
 
       {/* Desktop/tablet tiles */}
       <div className="hidden sm:grid grid-cols-1 sm:grid-cols-5 gap-3">
-        {tiles.map((t) => {
+        {tiles.map((t, inx) => {
           const active = selected === t.dateISO;
+          const isMonday = t.weekday === "Monday";
           const klass = [
             "rounded-2xl p-4 shadow bg-white border transition",
+            isMonday ? "shadow shadow-orange-500" : "",
             active
               ? "border-blue-500 ring-2 ring-blue-400"
               : "border-gray-200 hover:border-gray-300",
@@ -72,7 +74,7 @@ export default function WeekStrip({ tiles }: { tiles: Tile[] }) {
 
           return (
             <Link key={t.dateISO} href={`/?d=${t.dateISO}`} className={klass}>
-              <div className="text-sm text-gray-500">{t.weekday}</div>
+              <div className={"text-sm text-gray-500"}>{t.weekday}</div>
               <div className="text-lg font-semibold">{t.dateISO}</div>
               <div className="mt-2 text-sm">
                 <span className="font-medium">{t.count}</span>{" "}
