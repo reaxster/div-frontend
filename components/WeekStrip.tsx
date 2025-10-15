@@ -1,8 +1,20 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import numeral from "numeral";
+import {
+  Card,
+  CardActionArea,
+  CardContent,
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  useTheme,
+} from "@mui/material";
 
 type Tile = {
   dateISO: string;
@@ -17,6 +29,7 @@ export default function WeekStrip({ tiles }: { tiles: Tile[] }) {
   const sp = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
+  const theme = useTheme();
 
   if (!tiles?.length) return null;
 
@@ -25,79 +38,108 @@ export default function WeekStrip({ tiles }: { tiles: Tile[] }) {
   const fmtPct = (v?: number | null) =>
     v == null || !Number.isFinite(v) ? "—" : numeral(v).format("0.00%");
 
-  // --- Mobile: compact dropdown (show only Day + count) ---
-  const onSelect = (val: string) => {
-    // preserve other params, change only `d`
+  const buildHref = (val: string) => {
     const params = new URLSearchParams(sp?.toString());
     params.set("d", val);
-    router.push(`${pathname}?${params.toString()}`);
+    return `${pathname}?${params.toString()}`;
   };
 
+  const onSelect = (val: string) => router.push(buildHref(val));
+
   return (
-    <>
-      {/* Mobile dropdown */}
-      <div className="sm:hidden">
-        <label
-          htmlFor="week-select"
-          className="block text-sm text-gray-600 mb-1"
-        >
-          Select day
-        </label>
-        <select
-          id="week-select"
-          className="w-full rounded-xl border border-gray-300 bg-white p-3 text-sm"
-          value={selected}
-          onChange={(e) => onSelect(e.target.value)}
-        >
-          {tiles.map((t) => (
-            <option key={t.dateISO} value={t.dateISO}>
-              {t.weekday} • {t.count} {t.count === 1 ? "ticker" : "tickers"} •{" "}
-              {fmtPct(t.highest)} highest • {fmtPct(t.avgTop5)} Top 5 •{" "}
-              {fmtPct(t.avgAll)} Avg
-            </option>
-          ))}
-        </select>
+    <div>
+      {/* Mobile: MUI Select, but layout with div/Tailwind */}
+      <div className="sm:hidden mb-2">
+        <FormControl fullWidth size="small">
+          <InputLabel id="week-select-label">Select day</InputLabel>
+          <Select
+            labelId="week-select-label"
+            id="week-select"
+            label="Select day"
+            value={selected}
+            onChange={(e) => onSelect(e.target.value as string)}
+          >
+            {tiles.map((t) => (
+              <MenuItem key={t.dateISO} value={t.dateISO}>
+                {t.weekday} • {t.count} {t.count === 1 ? "ticker" : "tickers"} •{" "}
+                {fmtPct(t.highest)} highest • {fmtPct(t.avgTop5)} Top 5 •{" "}
+                {fmtPct(t.avgAll)} Avg
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       </div>
 
-      {/* Desktop/tablet tiles */}
+      {/* Desktop/tablet: div-based grid with Tailwind; cards are MUI */}
       <div className="hidden sm:grid grid-cols-1 sm:grid-cols-5 gap-3">
-        {tiles.map((t, inx) => {
+        {tiles.map((t) => {
           const active = selected === t.dateISO;
           const isMonday = t.weekday === "Monday";
-          const klass = [
-            "rounded-2xl p-4 shadow bg-white border transition",
-            isMonday ? "shadow shadow-orange-500" : "",
-            active
-              ? "border-blue-500 ring-2 ring-blue-400"
-              : "border-gray-200 hover:border-gray-300",
-          ].join(" ");
 
           return (
-            <Link key={t.dateISO} href={`/?d=${t.dateISO}`} className={klass}>
-              <div className={"text-sm text-gray-500"}>{t.weekday}</div>
-              <div className="text-lg font-semibold">{t.dateISO}</div>
-              <div className="mt-2 text-sm">
-                <span className="font-medium">{t.count}</span>{" "}
-                {t.count === 1 ? "ticker" : "tickers"}
-              </div>
-              <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-gray-600">
-                <div>
-                  <span className="block text-gray-400">Highest</span>
-                  {fmtPct(t.highest)}
-                </div>
-                <div>
-                  <span className="block text-gray-400">Avg Top 5</span>
-                  {fmtPct(t.avgTop5)}
-                </div>
-                <div>
-                  <span className="block text-gray-400">Avg All</span>
-                  {fmtPct(t.avgAll)}
-                </div>
-              </div>
-            </Link>
+            <Card
+              key={t.dateISO}
+              variant="outlined"
+              className={[
+                "rounded-2xl", // keep rounded via class (MUI respects)
+              ].join(" ")}
+              sx={{
+                borderRadius: 3,
+                borderColor: active ? "primary.main" : "divider",
+                boxShadow: isMonday
+                  ? `0 0 0 1px ${theme.palette.warning.main}`
+                  : undefined,
+                ...(active && {
+                  outline: `2px solid ${theme.palette.primary.light}`,
+                  outlineOffset: 0,
+                }),
+                transition: "border-color 0.15s ease",
+                "&:hover": { borderColor: "text.secondary" },
+              }}
+            >
+              <CardActionArea
+                component={Link}
+                href={buildHref(t.dateISO)}
+                sx={{ borderRadius: 3 }}
+              >
+                <CardContent>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ display: "block" }}
+                  >
+                    {t.weekday}
+                  </Typography>
+
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    {t.dateISO}
+                  </Typography>
+
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    <span className="font-medium">{t.count}</span>{" "}
+                    {t.count === 1 ? "ticker" : "tickers"}
+                  </Typography>
+
+                  <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-gray-600">
+                    <div>
+                      <span className="block text-gray-400">Highest</span>
+                      {fmtPct(t.highest)}
+                    </div>
+                    <div>
+                      <span className="block text-gray-400">Avg Top 5</span>
+                      {fmtPct(t.avgTop5)}
+                    </div>
+                    <div>
+                      <span className="block text-gray-400">Avg All</span>
+                      {fmtPct(t.avgAll)}
+                    </div>
+                  </div>
+                </CardContent>
+              </CardActionArea>
+            </Card>
           );
         })}
       </div>
-    </>
+    </div>
   );
 }
